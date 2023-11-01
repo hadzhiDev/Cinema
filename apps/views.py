@@ -1,29 +1,37 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from apps.models import Movie, Genre, Director, Comment
 from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotAllowed
+
+from apps.models import Movie, Genre, Director, Comment
+from apps.filters import MovieFilter
 from apps.forms import LoginForm
+from apps.decorators import increase_views
+
 
 def main(request):
     search = request.GET.get('search', None)
     if search:
         movies = Movie.objects.filter(name__icontains=search)
         return render(request, 'search_page.html', { 'movies_list': movies,})
-    movies = Movie.objects.all()
+    else:
+        movies = Movie.objects.all().order_by('-id')
     genre = request.GET.get('genre', None)
     if genre:
         genre = get_object_or_404(Genre, id=int(genre))
         movies = movies.filter(genres=genre)
-    genres = Genre.objects.all()
+
+    filter_set = MovieFilter(request.GET, queryset=movies)
+
     offset = request.GET.get('offset', 1)
     limit = request.GET.get('limit', 2)
-    paginator = Paginator(movies, limit)
+    paginator = Paginator(filter_set.qs, limit)
     movies = paginator.get_page(offset)
-    return render(request, 'index.html', { 'movies_list': movies, 'genres': genres,})
+    return render(request, 'index.html', { 'movies_list': movies, 'filter': filter_set})
 
 
+@increase_views
 def detail(request, id):
     movie = get_object_or_404(Movie, id=id)
     comments = Comment.objects.filter(movie=movie)
@@ -31,16 +39,14 @@ def detail(request, id):
     limit = request.GET.get('limit', 3)
     paginator = Paginator(comments, limit)
     comments = paginator.get_page(offset)
-    genres = Genre.objects.all()
-    return render(request, 'detail.html', {'movie': movie, 'comments': comments, 'genres': genres})
+    return render(request, 'detail.html', {'movie': movie, 'comments': comments,})
     
 
 
 def movies_by_genre(request, id):
     genre = get_object_or_404(Genre, id=id)
     movies = Movie.objects.filter(genres=genre)
-    genres = Genre.objects.all()
-    return render(request, 'index.html', { 'movies_list': movies, 'genres': genres, })
+    return render(request, 'index.html', { 'movies_list': movies, })
 
 
 def create_comment_ajax(request):
@@ -68,6 +74,10 @@ def login_profile(request):
     if request.user.is_authenticated:
         return redirect('/')
     form = LoginForm()
+    if request.session.get('next_link', None) is None:
+        request.session.modified = True
+        request.session['next_link'] = request.GET.get('next') or '/'
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -76,7 +86,8 @@ def login_profile(request):
             user = authenticate(username=username, password=password)
             if user:
                 login(request, user)
-                return redirect('/')
+                next_link = request.session['next_link']
+                return redirect(next_link)
             return render(request, 'auth/login.html', {
                 'message': 'The user is not found or invalid password',
                 'form': form})
@@ -159,6 +170,7 @@ def login_ajax(request):
             user = authenticate(username=username, password=password)
             if user:
                 login(request, user)
+                
                 return JsonResponse({'isAuthenticated': True}, status=200)
             return JsonResponse({'isAuthenticated': False, 'message': 'The user is not found or invalid password',},
                                 starus=400)
@@ -167,6 +179,11 @@ def login_ajax(request):
                                 starus=400)
     return HttpResponseNotAllowed
 
+
+def logout_ajax(request):
+    if request.user.is_authenticated:
+        logout(request)
+    return JsonResponse({'isLogout': True}, status=200)
 
 
     

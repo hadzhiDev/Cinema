@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Actor(models.Model):
     class Meta:
@@ -22,7 +23,7 @@ class Director(models.Model):
     def __str__(self):
         return f'{self.full_name}'
 
-
+ 
 class Genre(models.Model):
 
     class Meta:
@@ -42,16 +43,17 @@ class Movie(models.Model):
         verbose_name_plural = 'Фильмы'
 
     name = models.CharField(max_length=100, verbose_name='название')
-    year = models.IntegerField(verbose_name='год выпуска')
-    rating = models.IntegerField(verbose_name='рейтинг')
-    image = models.ImageField(upload_to='images/', verbose_name='обложка',)
+    year = models.ImageField(verbose_name='год выпуска')
+    rating = models.ImageField(verbose_name='рейтинг', validators=[MinValueValidator(0), MaxValueValidator(100)])
+    image = models.ImageField(upload_to='images/', verbose_name='обложка', )
     inner_image = models.ImageField(upload_to='inner_images/', verbose_name='внутренная обложка',)
     overview = models.CharField(max_length=1000, verbose_name='Краткое описание',)
     genres = models.ManyToManyField(Genre, verbose_name='Жанры', related_name='movies', )
-    # content = models.TextField(verbose_name='контент', null=True) 
     director = models.ForeignKey(Director, verbose_name = 'Режиссёр', on_delete=models.CASCADE, related_name='movies',)
+    views = models.PositiveIntegerField('просмотры', default=0)
+    author = models.ForeignKey('auth.User', on_delete=models.CASCADE, verbose_name='автор', null=True)
+    # content = models.TextField(verbose_name='контент', null=True) 
     # actors = models.ManyToManyField(Actor, verbose_name='Актеры', related_name='movies')
-    # author = models.ForeignKey('auth.User', on_delete=models.CASCADE, verbose_name='автор', null=True)
 
     def __str__(self):
         return f'{self.name} - {self.year}'

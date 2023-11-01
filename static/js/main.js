@@ -1,13 +1,17 @@
 let genres = document.getElementById('genres')
 let genres_card = document.querySelector('.genres_card')
 
-genres_card.addEventListener('mouseover', e =>{
-    genres.classList.remove('hidden')
-})
+if (genres_card){
+    genres_card.addEventListener('mouseover', e =>{
+        genres.classList.remove('hidden')
+    })
+}
 
-genres_card.addEventListener('mouseout', e => {
-    genres.classList.add('hidden')
-})
+if (genres_card){
+    genres_card.addEventListener('mouseout', e => {
+        genres.classList.add('hidden')
+    })
+}
 
 const createCommentVar = document.forms.createComment
 if (createCommentVar) {
@@ -23,9 +27,9 @@ createCommentVar.addEventListener('submit', e => {
         '/ajax/create_comment/',
         {
             method: 'POST',
-              headers:{
-                  'Accept': 'application/json'
-              },
+            headers:{
+                'Accept': 'application/json'
+            },
             body
         }
     )
@@ -59,7 +63,7 @@ const deleteComment = async (commentId) => {
       commentBlock.remove()
     }
   } else  alert('Network error or unauthorized')
-
+  
 }
 
 
